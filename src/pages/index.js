@@ -10,7 +10,7 @@ export default function HomePage() {
       <div className="flex flex-col justify-center items-center h-[40vh] w-full bg-slate-950">
         <Link
           href="/lobby"
-          className="px-14 py-4 mb-4 bg-slate-700 text-white font-bold text-xs uppercase shadow-md border-2 border-black transition-transform duration-300 hover:scale-105 font-free-pixel blink-animation"
+          className="absolute bottom-32 z-50 px-14 py-4 mb-4 bg-slate-700 text-white font-bold text-xs uppercase shadow-md border-2 border-black transition-transform duration-300 hover:scale-105 font-free-pixel blink-animation"
         >
           jogar {" >"}
         </Link>
