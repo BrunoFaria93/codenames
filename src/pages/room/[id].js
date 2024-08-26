@@ -3,6 +3,8 @@ import { useRouter } from 'next/router';
 import io from 'socket.io-client';
 import words from "../../resources/words.json";
 
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 const generateBoard = (words) => {
   // Defina a quantidade específica de cada tipo de carta
   const cardCounts = {
@@ -276,30 +278,23 @@ const handleResetGame = () => {
               Room: {roomId || "Loading..."}
             </h1>
             <div className="flex gap-x-1">
+              <FontAwesomeIcon
+                onClick={() => router.push("/lobby")}
+                className="text-white absolute left-5"
+                icon={faArrowLeft}
+              />
               <p className="text-[#f87171] font-bold">{redCardsRemaining}</p>
               <span className="text-white">-</span>
               <p className="text-[#60a5fa] font-bold">{blueCardsRemaining}</p>
             </div>
 
-            <div className="flex gap-x-2 mt-1">
-              <button
-                onClick={handleRevealAllClick}
-                className="bg-[#60a5fa] hover:bg-[#147af8] transition ease-in px-4 text-white rounded h-8"
-              >
-                Spymaster
-              </button>
-              <button
-                onClick={handleResetGame}
-                className="bg-[#f87171] hover:bg-[#f42727] transition ease-in px-4 text-white rounded h-8"
-              >
-                Reset
-              </button>
-            </div>
             {gameStatus === "playing" ? null : (
               <>
                 <h2 className="text-lg text-white mt-5">
                   {gameStatus === "playing" ? null : (
-                    <span className="text-white font-bold text-2xl blink-animation">Game Over</span>
+                    <span className="text-white font-bold text-2xl blink-animation">
+                      Game Over
+                    </span>
                   )}
                 </h2>
               </>
@@ -313,7 +308,7 @@ const handleResetGame = () => {
                     <div
                       key={`${rowIndex}-${colIndex}`}
                       onClick={() => handleCellClick(rowIndex, colIndex)}
-                      className={`w-16 md:w-32 h-16 md:h-32 perspective hover:scale-110 transition-all ease-in ${
+                      className={`w-16 md:w-32 h-16 md:h-32 perspective md:hover:scale-110 transition-all ease-in ${
                         clickedCards.some(
                           (card) =>
                             card.row === rowIndex &&
@@ -383,8 +378,24 @@ const handleResetGame = () => {
                 )}
               </div>
             ) : (
-              <p>Loading board...</p>
+                <div className="flex justify-start items-start min-h-screen">
+                  <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent border-solid rounded-full animate-spin"></div>
+                </div>
             )}
+          </div>
+          <div className="flex justify-end items-center gap-x-2 mt-5 mr-5 w-full">
+            <button
+              onClick={handleRevealAllClick}
+              className="bg-[#60a5fa] md:hover:bg-[#147af8] transition ease-in px-4 text-white rounded h-7"
+            >
+              Spymaster
+            </button>
+            <button
+              onClick={handleResetGame}
+              className="bg-[#f87171] md:hover:bg-[#f42727] transition ease-in px-4 text-white rounded h-7 mr-3"
+            >
+              Reset
+            </button>
           </div>
         </div>
       </div>

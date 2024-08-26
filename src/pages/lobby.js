@@ -11,8 +11,9 @@ const Lobby = () => {
     const [newRoomName, setNewRoomName] = useState('');
     const [socket, setSocket] = useState(null);
     const [error, setError] = useState(null);
-
+    const [loading, setLoading] = useState(false)
     useEffect(() => {
+        setLoading(true)
         const socketInstance = io('https://hilarious-fishy-handle.glitch.me/', {
             transports: ['websocket', 'polling'],
         });
@@ -21,9 +22,11 @@ const Lobby = () => {
         socketInstance.on('rooms-update', (data) => {
             console.log('Rooms update:', data);
             setRooms(data);
+            setLoading(false)
         });
 
         return () => {
+            setLoading(false)
             socketInstance.disconnect();
         };
     }, []);
@@ -51,7 +54,8 @@ const Lobby = () => {
     };
 
     return (
-      <div className="p-6 max-w-3xl mx-auto bg-slate-950 h-screen">
+      <div className="p-6 md:max-w-screen md:mx-0 mx-auto bg-slate-950 h-screen overflow-hidden">
+
         <h1 className="text-3xl font-bold mb-4 text-white">Lobby</h1>
         <div className="mb-6">
           <input
@@ -69,32 +73,38 @@ const Lobby = () => {
           </button>
         </div>
         {error && <p className="text-[#E63946] mb-4">{error}</p>}
-        <ul className="space-y-2">
-          {rooms.map((room) => (
-            <li
-              key={room.roomId}
-              className="flex items-center justify-between rounded-lg p-2 border border-gray-300 bg-slate-500"
-            >
-              <span className="text-white">
-                {room.roomId.charAt(0).toUpperCase() + room.roomId.slice(1)}
-              </span>
-              <div>
-                <button
-                  onClick={() => handleJoinRoom(room.roomId)}
-                  className="bg-teal-600 text-white px-3 py-1 rounded mr-2 hover:bg-teal-700"
-                >
-                  Entrar
-                </button>
-                <button
-                  onClick={() => handleDeleteRoom(room.roomId)}
-                  className="bg-[#f87171] text-white px-3 py-1 rounded hover:bg-[#f42727]"
-                >
-                  <FontAwesomeIcon icon={faTrash} />
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
+        {loading ? (
+          <div className="flex justify-center items-start min-h-screen">
+            <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent border-solid rounded-full animate-spin"></div>
+          </div>
+        ) : (
+          <ul className="space-y-2 overflow-y-auto h-[80%]">
+            {rooms.map((room) => (
+              <li
+                key={room.roomId}
+                className="flex items-center justify-between w-full md:w-1/2  rounded-lg p-4 shadow-md bg-gradient-to-r from-slate-600 to-slate-800 border border-transparent hover:shadow-lg transition-all duration-300"
+              >
+                <span className="text-white font-semibold text-lg">
+                  {room.roomId.charAt(0).toUpperCase() + room.roomId.slice(1)}
+                </span>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => handleJoinRoom(room.roomId)}
+                    className="bg-slate-600 text-white font-medium px-4 py-2 rounded-lg hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-400 transition-all duration-300"
+                  >
+                    Entrar
+                  </button>
+                  <button
+                    onClick={() => handleDeleteRoom(room.roomId)}
+                    className="text-red-500 font-medium px-2 py-2 rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-400 transition-all duration-300"
+                  >
+                    <FontAwesomeIcon icon={faTrash} />
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     );
 };
