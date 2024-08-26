@@ -46,9 +46,6 @@ const generateBoard = (words) => {
   return board;
 };
 
-
-
-
 const Room = () => {
     const router = useRouter();
     const { id: roomId } = router.query;
@@ -217,22 +214,58 @@ const Room = () => {
   };
   
   
+  useEffect(() => {
+    if (socket) {
+        // Escuta o evento 'reset-board' quando outro player reseta o jogo
+        socket.on("reset-board", (newBoard, newGameStatus, newRedCardsRemaining, newBlueCardsRemaining) => {
+            setClickedCards([]);  // Reseta o estado clickedCards
+            setBoard(newBoard);  // Atualiza o tabuleiro
+            setGameStatus(newGameStatus);  // Atualiza o estado do jogo
+            setRevealedBySpymaster(false);  // Reseta o estado do spymaster
+            setBlackWordRevealed(false);  // Reseta o estado da palavra preta
+            setRedCardsRemaining(newRedCardsRemaining);  // Atualiza as cartas vermelhas restantes
+            setBlueCardsRemaining(newBlueCardsRemaining);  // Atualiza as cartas azuis restantes
+        });
+    }
+    // Cleanup ao desmontar o componente
+    return () => {
+        if (socket) {
+            socket.off("reset-board");
+        }
+    };
+}, [socket]);
+
+// No handleResetGame, o código permanece o mesmo
+const handleResetGame = () => {
+    setClickedCards([]);
+    const newBoard = generateBoard(words);
+    setBoard(newBoard);
+    setRevealedBySpymaster(false);
+    setGameStatus('playing');
+    setBlackWordRevealed(false);
+    setRedCardsRemaining(9);
+    setBlueCardsRemaining(8);
+
+    if (socket) {
+        socket.emit("reset-board", roomId, newBoard, 'playing', 9, 8);
+    }
+};
+
   
+  //   const handleResetGame = () => {
+  //     setClickedCards([])
+  //     const newBoard = generateBoard(words);
+  //     setBoard(newBoard);
+  //     setRevealedBySpymaster(false)
+  //     setGameStatus('playing');
+  //     setBlackWordRevealed(false);
+  //     setRedCardsRemaining(9);
+  //     setBlueCardsRemaining(8);
   
-    const handleResetGame = () => {
-      setClickedCards([])
-      const newBoard = generateBoard(words);
-      setBoard(newBoard);
-      setRevealedBySpymaster(false)
-      setGameStatus('playing');
-      setBlackWordRevealed(false);
-      setRedCardsRemaining(9);
-      setBlueCardsRemaining(8);
-  
-      if (socket) {
-          socket.emit("reset-board", roomId, newBoard, 'playing', 9, 8);
-      }
-  };
+  //     if (socket) {
+  //         socket.emit("reset-board", roomId, newBoard, 'playing', 9, 8);
+  //     }
+  // };
   const shouldShowBorder = isSpymaster && clickedCard && clickedCard.row === rowIndex && clickedCard.col === colIndex;
 
     return (
