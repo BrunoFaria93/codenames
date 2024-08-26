@@ -386,13 +386,13 @@ const handleResetGame = () => {
           <div className="flex justify-end items-center gap-x-2 mt-5 mr-5 md:m-0 w-full">
             <button
               onClick={handleRevealAllClick}
-              className="bg-[#60a5fa] md:hover:bg-[#147af8] transition ease-in px-4 text-white rounded h-7"
+              className="bg-[#60a5fa] md:hover:bg-[#147af8] transition ease-in px-4 text-white rounded h-8"
             >
               Spymaster
             </button>
             <button
               onClick={handleResetGame}
-              className="bg-[#f87171] md:hover:bg-[#f42727] transition ease-in px-4 text-white rounded h-7 mr-3"
+              className="bg-[#f87171] md:hover:bg-[#f42727] transition ease-in px-4 text-white rounded h-8 mr-3"
             >
               Reset
             </button>
