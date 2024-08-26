@@ -271,8 +271,8 @@ const handleResetGame = () => {
   const shouldShowBorder = isSpymaster && clickedCard && clickedCard.row === rowIndex && clickedCard.col === colIndex;
 
     return (
-      <div className="p-0 md:p-4 h-screen w-screen bg-slate-950">
-        <div className="flex flex-col md:flex-row w-screen gap-x-4">
+      <div className="p-0 md:p-4 h-screen md:h-full w-screen md:w-full bg-slate-950">
+        <div className="flex flex-col w-screen md:w-full gap-x-4">
           <div className="flex flex-col w-full justify-center items-center mt-10">
             <h1 className="text-4xl font-bold mb-4 text-white">
               Room: {roomId || "Loading..."}
@@ -280,12 +280,12 @@ const handleResetGame = () => {
             <div className="flex gap-x-1">
               <FontAwesomeIcon
                 onClick={() => router.push("/lobby")}
-                className="text-white absolute left-5"
+                className="text-white absolute left-5 cursor-pointer"
                 icon={faArrowLeft}
               />
-              <p className="text-[#f87171] font-bold">{redCardsRemaining}</p>
-              <span className="text-white">-</span>
-              <p className="text-[#60a5fa] font-bold">{blueCardsRemaining}</p>
+              <p className="text-[#f87171] font-bold md:text-2xl">{redCardsRemaining}</p>
+              <span className="text-white md:text-2xl">-</span>
+              <p className="text-[#60a5fa] font-bold md:text-2xl md:mb-5">{blueCardsRemaining}</p>
             </div>
 
             {gameStatus === "playing" ? null : (
@@ -300,7 +300,7 @@ const handleResetGame = () => {
               </>
             )}
           </div>
-          <div className="w-full h-full flex justify-center items-center mr-60 mt-10 md:mt-0">
+          <div className="w-full h-full flex justify-center items-center mr-60 md:m-0 mt-10 md:mt-0">
             {board.length > 0 ? (
               <div className="grid grid-cols-5 gap-2 md:gap-5">
                 {board.map((row, rowIndex) =>
@@ -383,7 +383,7 @@ const handleResetGame = () => {
                 </div>
             )}
           </div>
-          <div className="flex justify-end items-center gap-x-2 mt-5 mr-5 w-full">
+          <div className="flex justify-end items-center gap-x-2 mt-5 mr-5 md:m-0 w-full">
             <button
               onClick={handleRevealAllClick}
               className="bg-[#60a5fa] md:hover:bg-[#147af8] transition ease-in px-4 text-white rounded h-7"
