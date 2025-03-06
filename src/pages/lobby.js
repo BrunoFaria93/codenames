@@ -67,17 +67,17 @@ const Lobby = () => {
           value={newRoomName}
           onChange={(e) => setNewRoomName(e.target.value)}
           placeholder="Digite o nome da sala"
-          className="border border-gray-300 p-2 rounded mr-2 w-2/3"
+          className="border border-gray-300 p-2 rounded mr-2 w-[83%] h-[40px] whitespace-nowrap"
         />
         <button
           onClick={handleCreateRoom}
-          className="bg-slate-500 text-white px-4 py-2 rounded hover:bg-slate-600"
+          className="bg-slate-500 text-white px-4 py-2 rounded hover:bg-slate-600 h-[40px]"
         >
           <FontAwesomeIcon icon={faPlus} />
         </button>
       </div>
       {error && <p className="text-[#E63946] mb-4">{error}</p>}
-      {!loading ? (
+      {loading ? (
         <div className="flex justify-center items-start mt-20 min-h-screen">
           <Lottie animationData={loadingAnimation} className="w-15 h-15" loop />
         </div>
