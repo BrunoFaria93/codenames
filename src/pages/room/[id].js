@@ -354,10 +354,13 @@ const Room = () => {
                     >
                       <div
                         className={`absolute w-full h-full backface-hidden flex items-center justify-center border border-gray-300 cursor-pointer rounded ${
+                          cell.revealed || revealedBySpymaster ? "" : "bg-white"
+                        }`}
+                        style={
                           cell.revealed || revealedBySpymaster
                             ? getCellColor(cell.category)
-                            : "bg-white"
-                        }`}
+                            : {}
+                        }
                       >
                         <span
                           className={`text-lg ${
@@ -375,9 +378,14 @@ const Room = () => {
                       <div
                         className={`absolute w-full h-full backface-hidden rotate-y-180 flex items-center justify-center border border-gray-300 cursor-pointer rounded ${
                           cell.revealed || revealedBySpymaster
-                            ? getCellColor(cell.category)
+                            ? ""
                             : "bg-white font-bold"
                         }`}
+                        style={
+                          cell.revealed || revealedBySpymaster
+                            ? getCellColor(cell.category)
+                            : {}
+                        }
                       >
                         <div
                           className={`absolute bottom-0 w-full h-5 md:h-10 ${
@@ -433,16 +441,44 @@ const Room = () => {
 };
 
 const getCellColor = (category) => {
+  const redCards = Array.from(
+    { length: 9 },
+    (_, i) => `/images/redcard${i + 1}.png`
+  );
+  const blueCards = Array.from(
+    { length: 8 },
+    (_, i) => `/images/bluecard${i + 1}.png`
+  );
+
   switch (category) {
     case "red":
-      return "bg-[url('/images/redCard.png')] bg-cover bg-no-repeat bg-center";
+      return {
+        backgroundImage: `url('${redCards[Math.floor(Math.random() * 9)]}')`,
+        backgroundSize: "cover",
+        backgroundRepeat: "no-repeat",
+        backgroundPosition: "center",
+      };
     case "blue":
-      return "bg-[url('/images/blueCard2.png')] bg-cover bg-no-repeat bg-center";
+      return {
+        backgroundImage: `url('${blueCards[Math.floor(Math.random() * 8)]}')`,
+        backgroundSize: "cover",
+        backgroundRepeat: "no-repeat",
+        backgroundPosition: "center",
+      };
     case "black":
-      return "bg-[url('/images/deathCard.png')] bg-cover bg-no-repeat bg-center";
+      return {
+        backgroundImage: "url('/images/deathCard.png')",
+        backgroundSize: "cover",
+        backgroundRepeat: "no-repeat",
+        backgroundPosition: "center",
+      };
     default:
-      return "bg-[url('/images/grayCard.jpg')] bg-cover bg-no-repeat bg-center";
+      return {
+        backgroundImage: "url('/images/grayCard.png')",
+        backgroundSize: "cover",
+        backgroundRepeat: "no-repeat",
+        backgroundPosition: "center",
+      };
   }
 };
-
 export default Room;
