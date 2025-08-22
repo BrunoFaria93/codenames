@@ -2,28 +2,27 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-@import url('https://fonts.googleapis.com/css2?family=Free+Pixel&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Free+Pixel&display=swap");
 
 .perspective {
-    perspective: 1000px;
+  perspective: 1000px;
 }
 
 .transform-style-preserve-3d {
-    transform-style: preserve-3d;
+  transform-style: preserve-3d;
 }
 
 .rotate-y-180 {
-    transform: rotateY(180deg);
+  transform: rotateY(180deg);
 }
 
 .backface-hidden {
-    backface-visibility: hidden;
+  backface-visibility: hidden;
 }
-
 
 body {
   color: rgb(var(--foreground-rgb));
-  font-family: 'Free Pixel', sans-serif;
+  font-family: "Free Pixel", sans-serif;
   background: linear-gradient(
       to bottom,
       transparent,
@@ -38,7 +37,8 @@ body {
   }
 }
 @keyframes blink {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
@@ -46,6 +46,23 @@ body {
   }
 }
 
-.blink-animation {
-  animation: blink 1.2s infinite;
+@keyframes move-particle {
+  0% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(var(--direction-x), var(--direction-y));
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+
+.bg-gradient-to-b {
+  background: linear-gradient(to bottom, #0a0a23, #1a1a3a);
+}
+
+div[style*="animation: move-particle"] {
+  --direction-x: calc(var(--direction) * 20px);
+  --direction-y: calc(var(--direction) * 20px);
 }

@@ -4,11 +4,10 @@ import io from "socket.io-client";
 import words from "../../resources/words.json";
 import Lottie from "lottie-react";
 import loadingAnimation from "@/assets/loading-code.json";
-
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
+
 const generateBoard = (words) => {
-  // Defina a quantidade específica de cada tipo de carta
   const cardCounts = {
     red: 9,
     blue: 8,
@@ -16,21 +15,16 @@ const generateBoard = (words) => {
     black: 1,
   };
 
-  // Remova duplicatas do array de palavras e verifique se há pelo menos 25 palavras únicas
   const uniqueWords = Array.from(new Set(words));
-
   if (uniqueWords.length < 25) {
     throw new Error(
       "O array de palavras deve conter pelo menos 25 palavras únicas."
     );
   }
 
-  // Embaralhe as palavras e selecione 25 únicas
   const shuffledWords = uniqueWords
     .sort(() => Math.random() - 0.5)
     .slice(0, 25);
-
-  // Crie uma lista de cartões com base nas contagens específicas
   const cards = [
     ...Array(cardCounts.red).fill({ category: "red" }),
     ...Array(cardCounts.blue).fill({ category: "blue" }),
@@ -38,10 +32,28 @@ const generateBoard = (words) => {
     { category: "black" },
   ];
 
-  // Embaralhe os cartões
-  const shuffledCards = cards.sort(() => Math.random() - 0.5);
+  // Assign a fixed image index to each card
+  const redIndices = Array.from({ length: 9 }, (_, i) => i).sort(
+    () => Math.random() - 0.5
+  );
+  const blueIndices = Array.from({ length: 8 }, (_, i) => i).sort(
+    () => Math.random() - 0.5
+  );
+  let redIndexCounter = 0;
+  let blueIndexCounter = 0;
 
-  // Crie o tabuleiro 5x5 usando os cartões embaralhados
+  const shuffledCards = cards
+    .sort(() => Math.random() - 0.5)
+    .map((card) => {
+      if (card.category === "red") {
+        return { ...card, imageIndex: redIndices[redIndexCounter++] };
+      } else if (card.category === "blue") {
+        return { ...card, imageIndex: blueIndices[blueIndexCounter++] };
+      } else {
+        return { ...card, imageIndex: null }; // No index for neutral or black
+      }
+    });
+
   const board = [];
   for (let i = 0; i < 5; i++) {
     board.push(
@@ -49,10 +61,10 @@ const generateBoard = (words) => {
         word: shuffledWords[i * 5 + index],
         revealed: false,
         category: card.category,
+        imageIndex: card.imageIndex,
       }))
     );
   }
-
   return board;
 };
 
@@ -72,14 +84,13 @@ const Room = () => {
   const [clickedCards, setClickedCards] = useState([]);
 
   useEffect(() => {
-    if (!roomId) return; // Verifica se roomId está definido antes de prosseguir
+    if (!roomId) return;
 
     const socketInstance = io(process.env.NEXT_PUBLIC_SOCKET_URL, {
       transports: ["websocket", "polling"],
     });
 
     setSocket(socketInstance);
-
     socketInstance.emit("join-room", roomId);
 
     socketInstance.on("room-data", (data) => {
@@ -115,7 +126,6 @@ const Room = () => {
     const countCards = () => {
       let redCount = 0;
       let blueCount = 0;
-
       board.forEach((row) => {
         row.forEach((cell) => {
           if (cell && !cell.revealed) {
@@ -124,69 +134,51 @@ const Room = () => {
           }
         });
       });
-
       setRedCardsRemaining(redCount);
       setBlueCardsRemaining(blueCount);
     };
-
     countCards();
   }, [board]);
+
   useEffect(() => {
     if (socket) {
-      // Remover listeners antigos para evitar múltiplas adições
       socket.off("card-clicked");
-
-      // Adicionar novo listener
       socket.on("card-clicked", ({ roomId, cardPosition }) => {
-        console.log("Card clicked event received:", cardPosition);
         setClickedCards((prevClickedCards) => {
           const isCardAlreadyClicked = prevClickedCards.some(
             (card) =>
               card.row === cardPosition.row && card.col === cardPosition.col
           );
           if (!isCardAlreadyClicked) {
-            console.log("Adding card to clickedCards:", cardPosition);
             return [...prevClickedCards, cardPosition];
           }
           return prevClickedCards;
         });
       });
     }
-
     return () => {
-      if (socket) {
-        socket.off("card-clicked");
-      }
+      if (socket) socket.off("card-clicked");
     };
   }, [socket]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.hidden) {
-        router.push("/lobby"); // Redireciona para o lobby quando o usuário sai do navegador
-      }
+      if (document.hidden) router.push("/lobby");
     };
-
     document.addEventListener("visibilitychange", handleVisibilityChange);
-
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [router]);
 
   const handleRevealAllClick = () => {
-    // Alterna o estado revealedBySpymaster
     setRevealedBySpymaster(!revealedBySpymaster);
-
-    // Emite o evento para todos os jogadores na sala
-    if (socket) {
-      socket.emit("reveal-all-clicked", roomId);
-    }
+    if (socket) socket.emit("reveal-all-clicked", roomId);
   };
 
   const handleCellClick = (row, col) => {
-    if (revealedBySpymaster) return;
-    if (gameStatus !== "playing" || blackWordRevealed) return;
+    if (revealedBySpymaster || gameStatus !== "playing" || blackWordRevealed)
+      return;
 
     const clickedCell = board[row][col];
     if (clickedCell.revealed) return;
@@ -211,13 +203,10 @@ const Room = () => {
     setBoard(newBoard);
     setGameStatus(updatedGameStatus);
     setBlackWordRevealed(updatedBlackWordRevealed);
-    setClickedCards((prevClickedCards) => [...prevClickedCards, { row, col }]); // Adiciona o card clicado
+    setClickedCards((prevClickedCards) => [...prevClickedCards, { row, col }]);
 
     if (socket) {
-      socket.emit("card-clicked", {
-        roomId,
-        cardPosition: { row, col }, // Envia a posição do card clicado
-      });
+      socket.emit("card-clicked", { roomId, cardPosition: { row, col } });
       socket.emit("update-board", {
         roomId,
         board: newBoard,
@@ -229,7 +218,6 @@ const Room = () => {
 
   useEffect(() => {
     if (socket) {
-      // Escuta o evento 'reset-board' quando outro player reseta o jogo
       socket.on(
         "reset-board",
         (
@@ -238,25 +226,21 @@ const Room = () => {
           newRedCardsRemaining,
           newBlueCardsRemaining
         ) => {
-          setClickedCards([]); // Reseta o estado clickedCards
-          setBoard(newBoard); // Atualiza o tabuleiro
-          setGameStatus(newGameStatus); // Atualiza o estado do jogo
-          setRevealedBySpymaster(false); // Reseta o estado do spymaster
-          setBlackWordRevealed(false); // Reseta o estado da palavra preta
-          setRedCardsRemaining(newRedCardsRemaining); // Atualiza as cartas vermelhas restantes
-          setBlueCardsRemaining(newBlueCardsRemaining); // Atualiza as cartas azuis restantes
+          setClickedCards([]);
+          setBoard(newBoard);
+          setGameStatus(newGameStatus);
+          setRevealedBySpymaster(false);
+          setBlackWordRevealed(false);
+          setRedCardsRemaining(newRedCardsRemaining);
+          setBlueCardsRemaining(newBlueCardsRemaining);
         }
       );
     }
-    // Cleanup ao desmontar o componente
     return () => {
-      if (socket) {
-        socket.off("reset-board");
-      }
+      if (socket) socket.off("reset-board");
     };
   }, [socket]);
 
-  // No handleResetGame, o código permanece o mesmo
   const handleResetGame = () => {
     setClickedCards([]);
     const newBoard = generateBoard(words);
@@ -272,29 +256,21 @@ const Room = () => {
     }
   };
 
-  //   const handleResetGame = () => {
-  //     setClickedCards([])
-  //     const newBoard = generateBoard(words);
-  //     setBoard(newBoard);
-  //     setRevealedBySpymaster(false)
-  //     setGameStatus('playing');
-  //     setBlackWordRevealed(false);
-  //     setRedCardsRemaining(9);
-  //     setBlueCardsRemaining(8);
-
-  //     if (socket) {
-  //         socket.emit("reset-board", roomId, newBoard, 'playing', 9, 8);
-  //     }
-  // };
-  const shouldShowBorder =
-    isSpymaster &&
-    clickedCard &&
-    clickedCard.row === rowIndex &&
-    clickedCard.col === colIndex;
-
   return (
-    <div className="p-0 md:p-4 h-screen md:h-full w-screen md:w-full bg-slate-950">
-      <div className="flex flex-col w-screen md:w-full gap-x-4">
+    <div className="p-0 md:p-4 h-screen w-screen relative overflow-hidden">
+      {/* Video Background */}
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="absolute top-0 left-0 w-full h-full object-cover z-0"
+      >
+        <source src="/images/background.mp4" type="video/mp4" />
+      </video>
+      {/* Overlay to ensure content visibility */}
+      <div className="absolute top-0 left-0 w-full h-full bg-black opacity-30 z-5"></div>
+      <div className="flex flex-col w-full gap-x-4 relative z-10">
         <div className="flex flex-col w-full justify-center items-center mt-10">
           <h1 className="text-4xl font-bold mb-4 text-white">
             Room: {roomId || "Loading..."}
@@ -313,17 +289,12 @@ const Room = () => {
               {blueCardsRemaining}
             </p>
           </div>
-
           {gameStatus === "playing" ? null : (
-            <>
-              <h2 className="text-lg text-white mt-5">
-                {gameStatus === "playing" ? null : (
-                  <span className="text-white font-bold text-2xl blink-animation">
-                    Game Over
-                  </span>
-                )}
-              </h2>
-            </>
+            <h2 className="text-lg text-white mt-5">
+              <span className="text-white font-bold text-2xl blink-animation">
+                Game Over
+              </span>
+            </h2>
           )}
         </div>
         <div className="w-full h-full flex justify-center items-center mr-60 md:m-0 mt-10 md:mt-0">
@@ -340,7 +311,7 @@ const Room = () => {
                           card.row === rowIndex &&
                           card.col === colIndex &&
                           revealedBySpymaster
-                      ) // Verifica se o card está na lista de clicados
+                      )
                         ? "border-4 border-yellow-400"
                         : ""
                     }`}
@@ -358,7 +329,7 @@ const Room = () => {
                         }`}
                         style={
                           cell.revealed || revealedBySpymaster
-                            ? getCellColor(cell.category)
+                            ? getCellColor(cell.category, cell.imageIndex)
                             : {}
                         }
                       >
@@ -383,7 +354,7 @@ const Room = () => {
                         }`}
                         style={
                           cell.revealed || revealedBySpymaster
-                            ? getCellColor(cell.category)
+                            ? getCellColor(cell.category, cell.imageIndex)
                             : {}
                         }
                       >
@@ -440,7 +411,7 @@ const Room = () => {
   );
 };
 
-const getCellColor = (category) => {
+const getCellColor = (category, imageIndex) => {
   const redCards = Array.from(
     { length: 9 },
     (_, i) => `/images/redcard${i + 1}.png`
@@ -453,14 +424,14 @@ const getCellColor = (category) => {
   switch (category) {
     case "red":
       return {
-        backgroundImage: `url('${redCards[Math.floor(Math.random() * 9)]}')`,
+        backgroundImage: `url('${redCards[imageIndex]}')`,
         backgroundSize: "cover",
         backgroundRepeat: "no-repeat",
         backgroundPosition: "center",
       };
     case "blue":
       return {
-        backgroundImage: `url('${blueCards[Math.floor(Math.random() * 8)]}')`,
+        backgroundImage: `url('${blueCards[imageIndex]}')`,
         backgroundSize: "cover",
         backgroundRepeat: "no-repeat",
         backgroundPosition: "center",
@@ -481,4 +452,5 @@ const getCellColor = (category) => {
       };
   }
 };
+
 export default Room;
