@@ -16,7 +16,11 @@ const Lobby = () => {
   const [loading, setLoading] = useState(false);
   useEffect(() => {
     setLoading(true);
-    const socketInstance = io("https://hilarious-fishy-handle.glitch.me/", {
+    console.log(
+      "process.env.NEXT_PUBLIC_SOCKET_URL ",
+      process.env.NEXT_PUBLIC_SOCKET_URL
+    );
+    const socketInstance = io(process.env.NEXT_PUBLIC_SOCKET_URL, {
       transports: ["websocket", "polling"],
     });
     setSocket(socketInstance);

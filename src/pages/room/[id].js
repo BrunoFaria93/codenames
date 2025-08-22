@@ -74,7 +74,7 @@ const Room = () => {
   useEffect(() => {
     if (!roomId) return; // Verifica se roomId está definido antes de prosseguir
 
-    const socketInstance = io("https://hilarious-fishy-handle.glitch.me/", {
+    const socketInstance = io(process.env.NEXT_PUBLIC_SOCKET_URL, {
       transports: ["websocket", "polling"],
     });
 
