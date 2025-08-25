@@ -7,8 +7,6 @@ export const initSocket = () => {
   if (!socket) {
     const url = typeof window !== "undefined" ? window.location.origin : "";
 
-    console.log("Connecting to:", url);
-
     socket = io(url, {
       path: "/api/socket",
       transports: ["websocket"],

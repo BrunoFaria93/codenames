@@ -640,14 +640,6 @@ const Room = () => {
         </div>
 
         <div className="flex justify-center items-center gap-2 md:gap-4 mt-6 md:mt-8 pb-6 md:pb-8 px-2">
-          <button
-            onClick={handleRevealAllClick}
-            className="bg-gradient-to-r bg-amber-500/20 hover:bg-amber-500/30 backdrop-blur-lg border border-amber-400/30 transition-all duration-300 px-3 md:px-6 py-2 md:py-3 text-amber-200 hover:text-amber-100 font-semibold rounded-xl shadow-lg flex items-center gap-1 md:gap-2 text-sm md:text-base"
-          >
-            <FontAwesomeIcon icon={faEye} className="text-sm md:text-base" />
-            <span className="whitespace-nowrap">Capitão</span>
-          </button>
-
           {gameStatus === "playing" && (
             <button
               onClick={handlePassTurn}
@@ -670,6 +662,13 @@ const Room = () => {
               className="text-sm md:text-base"
             />
             <span className="whitespace-nowrap">Reiniciar</span>
+          </button>
+          <button
+            onClick={handleRevealAllClick}
+            className="bg-gradient-to-r bg-amber-500/20 hover:bg-amber-500/30 backdrop-blur-lg border border-amber-400/30 transition-all duration-300 px-3 md:px-6 py-2 md:py-3 text-amber-200 hover:text-amber-100 font-semibold rounded-xl shadow-lg flex items-center gap-1 md:gap-2 text-sm md:text-base"
+          >
+            <FontAwesomeIcon icon={faEye} className="text-sm md:text-base" />
+            <span className="whitespace-nowrap">Capitão</span>
           </button>
         </div>
       </div>

@@ -5,7 +5,6 @@ const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL;
 
 const useSocket = (event, callback) => {
   useEffect(() => {
-    console.log("Attempting to connect to:", SOCKET_URL);
     const socket = io(SOCKET_URL, {
       transports: ["websocket", "polling"],
     });
@@ -19,7 +18,6 @@ const useSocket = (event, callback) => {
     });
 
     socket.on(event, (data) => {
-      console.log(`Received ${event}:`, data);
       callback(data);
     });
 
