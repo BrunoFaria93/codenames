@@ -107,12 +107,6 @@ export default function HomePage() {
             {/* Skull Icon */}
 
             {/* Main Title */}
-            <h1 className="text-6xl md:text-8xl font-black bg-gradient-to-r from-red-500 via-amber-400 to-red-600 bg-clip-text text-transparent mb-4 relative">
-              <span className="drop-shadow-2xl">CÓDIGO</span>
-            </h1>
-            <h2 className="text-5xl md:text-7xl font-black bg-gradient-to-r from-amber-400 via-red-500 to-amber-600 bg-clip-text text-transparent relative">
-              <span className="drop-shadow-2xl">PIRATA</span>
-            </h2>
 
             {/* Decorative Swords */}
             <div className="absolute -left-12 top-1/2 transform -translate-y-1/2 hidden md:block">
