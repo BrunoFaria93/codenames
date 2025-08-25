@@ -14,6 +14,9 @@ import {
   faCompass,
   faTreasureChest,
   faShip,
+  faCrown,
+  faFlag,
+  faForward,
 } from "@fortawesome/free-solid-svg-icons";
 
 const generateBoard = (words) => {
@@ -88,6 +91,7 @@ const Room = () => {
   const [players, setPlayers] = useState({});
   const [socket, setSocket] = useState(null);
   const [gameStatus, setGameStatus] = useState("playing");
+  const [winnerTeam, setWinnerTeam] = useState(null);
   const [blackWordRevealed, setBlackWordRevealed] = useState(false);
   const [isSpymaster, setIsSpymaster] = useState(false);
   const [revealedBySpymaster, setRevealedBySpymaster] = useState(false);
@@ -96,11 +100,13 @@ const Room = () => {
   const [clickedCards, setClickedCards] = useState([]);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isLoaded, setIsLoaded] = useState(false);
+  const [currentTurn, setCurrentTurn] = useState("red");
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoaded(true), 500);
     return () => clearTimeout(timer);
   }, []);
+
   useEffect(() => {
     if (!roomId) return;
 
@@ -120,7 +126,6 @@ const Room = () => {
               (cell.category === "red" || cell.category === "blue") &&
               cell.imageIndex === undefined
             ) {
-              // Gera índice aleatório para cada carta
               const maxIndex = cell.category === "red" ? 9 : 8;
               return {
                 ...cell,
@@ -135,12 +140,30 @@ const Room = () => {
       if (data.playerColor) setPlayerColor(data.playerColor);
       if (data.players) setPlayers(data.players);
       if (data.gameStatus) setGameStatus(data.gameStatus);
+      if (data.currentTurn) setCurrentTurn(data.currentTurn);
       if (data.blackWordRevealed !== undefined)
         setBlackWordRevealed(data.blackWordRevealed);
       if (data.redCardsRemaining !== undefined)
         setRedCardsRemaining(data.redCardsRemaining);
       if (data.blueCardsRemaining !== undefined)
         setBlueCardsRemaining(data.blueCardsRemaining);
+
+      // Derive winnerTeam based on card counts to ensure consistency
+      if (data.gameStatus === "finished" && !data.blackWordRevealed) {
+        if (data.redCardsRemaining === 0) {
+          setWinnerTeam("red");
+        } else if (data.blueCardsRemaining === 0) {
+          setWinnerTeam("blue");
+        } else {
+          setWinnerTeam(data.winnerTeam || null);
+        }
+      } else {
+        setWinnerTeam(data.winnerTeam || null);
+      }
+    });
+
+    socketInstance.on("turn-changed", ({ newTurn }) => {
+      setCurrentTurn(newTurn);
     });
 
     socketInstance.on(
@@ -164,6 +187,8 @@ const Room = () => {
         );
         setBoard(fixedBoard);
         setGameStatus(newStatus);
+        setWinnerTeam(null);
+        setCurrentTurn("red");
         setBlackWordRevealed(false);
         setRedCardsRemaining(newRedCardsRemaining);
         setBlueCardsRemaining(newBlueCardsRemaining);
@@ -171,6 +196,7 @@ const Room = () => {
     );
 
     return () => {
+      socketInstance.off("turn-changed");
       socketInstance.disconnect();
     };
   }, [roomId]);
@@ -189,9 +215,23 @@ const Room = () => {
       });
       setRedCardsRemaining(redCount);
       setBlueCardsRemaining(blueCount);
+
+      if (redCount === 0 && gameStatus === "playing") {
+        setGameStatus("finished");
+        setWinnerTeam("red");
+        if (socket) {
+          socket.emit("game-won", { roomId, winnerTeam: "red" });
+        }
+      } else if (blueCount === 0 && gameStatus === "playing") {
+        setGameStatus("finished");
+        setWinnerTeam("blue");
+        if (socket) {
+          socket.emit("game-won", { roomId, winnerTeam: "blue" });
+        }
+      }
     };
     countCards();
-  }, [board]);
+  }, [board, gameStatus, socket, roomId]);
 
   useEffect(() => {
     if (socket) {
@@ -208,9 +248,17 @@ const Room = () => {
           return prevClickedCards;
         });
       });
+
+      socket.on("game-won", ({ winnerTeam }) => {
+        setGameStatus("finished");
+        setWinnerTeam(winnerTeam);
+      });
     }
     return () => {
-      if (socket) socket.off("card-clicked");
+      if (socket) {
+        socket.off("card-clicked");
+        socket.off("game-won");
+      }
     };
   }, [socket]);
 
@@ -247,15 +295,24 @@ const Room = () => {
 
     let updatedGameStatus = gameStatus;
     let updatedBlackWordRevealed = blackWordRevealed;
+    let updatedWinnerTeam = winnerTeam;
+    let newCurrentTurn = currentTurn;
 
     if (clickedCell.category === "black") {
-      updatedGameStatus = "lost";
+      updatedGameStatus = "finished";
       updatedBlackWordRevealed = true;
+      updatedWinnerTeam = currentTurn === "red" ? "blue" : "red";
+    } else {
+      if (clickedCell.category !== currentTurn) {
+        newCurrentTurn = currentTurn === "red" ? "blue" : "red";
+      }
     }
 
     setBoard(newBoard);
     setGameStatus(updatedGameStatus);
     setBlackWordRevealed(updatedBlackWordRevealed);
+    setWinnerTeam(updatedWinnerTeam);
+    setCurrentTurn(newCurrentTurn);
     setClickedCards((prevClickedCards) => [...prevClickedCards, { row, col }]);
 
     if (socket) {
@@ -265,7 +322,13 @@ const Room = () => {
         board: newBoard,
         gameStatus: updatedGameStatus,
         blackWordRevealed: updatedBlackWordRevealed,
+        winnerTeam: updatedWinnerTeam,
+        currentTurn: newCurrentTurn,
       });
+
+      if (updatedWinnerTeam) {
+        socket.emit("game-won", { roomId, winnerTeam: updatedWinnerTeam });
+      }
     }
   };
 
@@ -284,6 +347,8 @@ const Room = () => {
           setGameStatus(newGameStatus);
           setRevealedBySpymaster(false);
           setBlackWordRevealed(false);
+          setWinnerTeam(null);
+          setCurrentTurn("red");
           setRedCardsRemaining(newRedCardsRemaining);
           setBlueCardsRemaining(newBlueCardsRemaining);
         }
@@ -301,6 +366,8 @@ const Room = () => {
     setRevealedBySpymaster(false);
     setGameStatus("playing");
     setBlackWordRevealed(false);
+    setWinnerTeam(null);
+    setCurrentTurn("red");
     setRedCardsRemaining(9);
     setBlueCardsRemaining(8);
 
@@ -309,9 +376,19 @@ const Room = () => {
     }
   };
 
+  const handlePassTurn = () => {
+    if (gameStatus !== "playing") return;
+
+    const newTurn = currentTurn === "red" ? "blue" : "red";
+    setCurrentTurn(newTurn);
+
+    if (socket) {
+      socket.emit("pass-turn", { roomId, newTurn });
+    }
+  };
+
   return (
     <div className="p-0 md:p-4 h-screen w-screen relative overflow-hidden">
-      {/* Video Background */}
       <video
         autoPlay
         loop
@@ -322,7 +399,6 @@ const Room = () => {
         <source src="/images/background.mp4" type="video/mp4" />
       </video>
 
-      {/* Dynamic Gradient Overlay */}
       <div
         className="absolute top-0 left-0 w-full h-full z-5 transition-all duration-1000"
         style={{
@@ -333,7 +409,6 @@ const Room = () => {
         }}
       ></div>
 
-      {/* Floating Pirate Elements */}
       <div className="absolute inset-0 z-5 pointer-events-none">
         <div className="absolute top-20 left-10 w-32 h-32 opacity-20">
           <FontAwesomeIcon
@@ -372,7 +447,6 @@ const Room = () => {
         </div>
       </div>
 
-      {/* Particle Effects */}
       <div className="absolute inset-0 z-5 pointer-events-none">
         {[...Array(20)].map((_, i) => (
           <div
@@ -389,7 +463,6 @@ const Room = () => {
       </div>
 
       <div className="flex flex-col w-full gap-x-4 relative z-10 h-full">
-        {/* Header melhorado */}
         <div className="flex flex-col w-full justify-center items-center mt-6 md:mt-10 px-4">
           <div className="flex items-center justify-between w-full max-w-4xl mb-4">
             <button
@@ -406,40 +479,93 @@ const Room = () => {
                 </span>
               </h1>
             </div>
-            <div className="w-10"></div>{" "}
-            {/* Espaçador para manter o título centralizado */}
+            <div className="w-10"></div>
           </div>
 
-          {/* Contador de cartas */}
-          <div className="flex items-center gap-4 bg-black/30 backdrop-blur-sm rounded-xl px-6 py-3 mb-2 border border-white/10 shadow-lg">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full bg-red-500"></div>
-              <p className="text-red-300 font-bold text-xl md:text-2xl">
-                {redCardsRemaining}
-              </p>
+          {gameStatus === "playing" && (
+            <div className="flex items-center gap-3 mb-3 bg-black/30 backdrop-blur-sm rounded-xl px-6 py-2 border border-white/10 shadow-lg">
+              <FontAwesomeIcon
+                icon={faFlag}
+                className={`text-lg ${
+                  currentTurn === "red" ? "text-red-400" : "text-blue-400"
+                }`}
+              />
+              <span className="text-white font-semibold">
+                Vez do Time{" "}
+                <span
+                  className={
+                    currentTurn === "red" ? "text-red-300" : "text-blue-300"
+                  }
+                >
+                  {currentTurn === "red" ? "Vermelho" : "Azul"}
+                </span>
+              </span>
             </div>
+          )}
 
-            <span className="text-white/70 text-xl">|</span>
+          {gameStatus == "playing" && (
+            <div className="flex items-center gap-4 bg-black/30 backdrop-blur-sm rounded-xl px-6 py-3 mb-2 border border-white/10 shadow-lg">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-full bg-red-500"></div>
+                <p className="text-red-300 font-bold text-xl md:text-2xl">
+                  {redCardsRemaining}
+                </p>
+              </div>
 
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full bg-blue-500"></div>
-              <p className="text-blue-300 font-bold text-xl md:text-2xl">
-                {blueCardsRemaining}
-              </p>
+              <span className="text-white/70 text-xl">|</span>
+
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-full bg-blue-500"></div>
+                <p className="text-blue-300 font-bold text-xl md:text-2xl">
+                  {blueCardsRemaining}
+                </p>
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Status do jogo */}
           {gameStatus !== "playing" && (
-            <div className="mt-4 bg-red-500/90 backdrop-blur-sm rounded-xl px-6 py-2 border border-red-300/30 shadow-lg">
-              <h2 className="text-white font-bold text-xl md:text-2xl animate-pulse">
-                Fim de Jogo
-              </h2>
+            <div
+              className={`mt-4 backdrop-blur-sm rounded-xl px-6 py-3 border shadow-lg ${
+                winnerTeam === "red"
+                  ? "bg-red-500/90 border-red-300/30"
+                  : winnerTeam === "blue"
+                  ? "bg-blue-500/90 border-blue-300/30"
+                  : "bg-gray-500/90 border-gray-300/30"
+              }`}
+            >
+              <div className="flex items-center justify-center gap-3">
+                <FontAwesomeIcon
+                  icon={faCrown}
+                  className={`text-2xl ${
+                    winnerTeam === "red"
+                      ? "text-yellow-300"
+                      : winnerTeam === "blue"
+                      ? "text-yellow-300"
+                      : "text-gray-300"
+                  }`}
+                />
+                <h2 className="text-white font-bold text-xl md:text-2xl animate-pulse">
+                  {winnerTeam
+                    ? `🏆 Time ${
+                        winnerTeam === "red" ? "Vermelho" : "Azul"
+                      } Venceu!`
+                    : "Fim de Jogo"}
+                </h2>
+                <FontAwesomeIcon
+                  icon={faCrown}
+                  className={`text-2xl ${
+                    winnerTeam === "red"
+                      ? "text-yellow-300"
+                      : winnerTeam === "blue"
+                      ? "text-yellow-300"
+                      : "text-gray-300"
+                  }`}
+                />
+              </div>
             </div>
           )}
         </div>
 
-        {/* Área do tabuleiro */}
         <div className="w-full h-full flex justify-center items-center mt-6 md:mt-8 px-4">
           {board.length > 0 ? (
             <div className="grid grid-cols-5 gap-2 md:gap-4 max-w-4xl">
@@ -466,7 +592,6 @@ const Room = () => {
                           : ""
                       }`}
                     >
-                      {/* Frente da carta */}
                       <div
                         className={`absolute w-full h-full backface-hidden flex items-center justify-center border-2 border-gray-400/30 cursor-pointer rounded-lg bg-white/95 shadow-md ${
                           cell.revealed || revealedBySpymaster
@@ -480,7 +605,6 @@ const Room = () => {
                         </span>
                       </div>
 
-                      {/* Verso da carta (revelada) */}
                       <div
                         className={`absolute w-full h-full backface-hidden rotate-y-180 flex items-center justify-center cursor-pointer rounded-lg overflow-hidden ${
                           cell.revealed || revealedBySpymaster ? "" : "bg-white"
@@ -515,21 +639,37 @@ const Room = () => {
           )}
         </div>
 
-        {/* Botões de ação */}
-        <div className="flex justify-center items-center gap-4 mt-6 md:mt-8 pb-6 md:pb-8">
+        <div className="flex justify-center items-center gap-2 md:gap-4 mt-6 md:mt-8 pb-6 md:pb-8 px-2">
           <button
             onClick={handleRevealAllClick}
-            className="bg-gradient-to-r bg-white/10 backdrop-blur-lg border border-white/20   transition-all duration-300 px-6 py-3 text-white font-semibold rounded-xl shadow-lg flex items-center gap-2"
+            className="bg-gradient-to-r bg-amber-500/20 hover:bg-amber-500/30 backdrop-blur-lg border border-amber-400/30 transition-all duration-300 px-3 md:px-6 py-2 md:py-3 text-amber-200 hover:text-amber-100 font-semibold rounded-xl shadow-lg flex items-center gap-1 md:gap-2 text-sm md:text-base"
           >
-            <FontAwesomeIcon icon={faEye} />
-            <span>Capitão</span>
+            <FontAwesomeIcon icon={faEye} className="text-sm md:text-base" />
+            <span className="whitespace-nowrap">Capitão</span>
           </button>
+
+          {gameStatus === "playing" && (
+            <button
+              onClick={handlePassTurn}
+              className="bg-gradient-to-r bg-white/10 backdrop-blur-lg border border-white/20 transition-all duration-300 px-3 md:px-6 py-2 md:py-3 text-white font-semibold rounded-xl shadow-lg flex items-center gap-1 md:gap-2 text-sm md:text-base"
+            >
+              <FontAwesomeIcon
+                icon={faForward}
+                className="text-sm md:text-base"
+              />
+              <span className="whitespace-nowrap">Passar Vez</span>
+            </button>
+          )}
+
           <button
             onClick={handleResetGame}
-            className="bg-gradient-to-r bg-white/10 backdrop-blur-lg border border-white/20  transition-all duration-300 px-6 py-3 text-white font-semibold rounded-xl shadow-lg  flex items-center gap-2"
+            className="bg-gradient-to-r bg-white/10 backdrop-blur-lg border border-white/20 transition-all duration-300 px-3 md:px-6 py-2 md:py-3 text-white font-semibold rounded-xl shadow-lg flex items-center gap-1 md:gap-2 text-sm md:text-base"
           >
-            <FontAwesomeIcon icon={faRefresh} />
-            <span>Reiniciar</span>
+            <FontAwesomeIcon
+              icon={faRefresh}
+              className="text-sm md:text-base"
+            />
+            <span className="whitespace-nowrap">Reiniciar</span>
           </button>
         </div>
       </div>
@@ -540,16 +680,15 @@ const Room = () => {
 const getCellColor = (category, imageIndex) => {
   const redCards = Array.from(
     { length: 9 },
-    (_, i) => `/images/redcard${i + 1}.png`
+    (_, i) => `/images/redCard${i + 1}.png`
   );
   const blueCards = Array.from(
     { length: 8 },
-    (_, i) => `/images/bluecard${i + 1}.png`
+    (_, i) => `/images/blueCard${i + 1}.png`
   );
 
   switch (category) {
     case "red":
-      // Verifica se imageIndex é válido, senão usa 0 como fallback
       const redIndex =
         imageIndex !== undefined && imageIndex !== null ? imageIndex : 0;
       return {
@@ -559,7 +698,6 @@ const getCellColor = (category, imageIndex) => {
         backgroundPosition: "center",
       };
     case "blue":
-      // Verifica se imageIndex é válido, senão usa 0 como fallback
       const blueIndex =
         imageIndex !== undefined && imageIndex !== null ? imageIndex : 0;
       return {

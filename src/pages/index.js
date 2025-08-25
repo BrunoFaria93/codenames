@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -14,6 +14,9 @@ import {
 export default function HomePage() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [activeVideo, setActiveVideo] = useState(1);
+  const video1Ref = useRef(null);
+  const video2Ref = useRef(null);
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoaded(true), 500);
@@ -32,18 +35,64 @@ export default function HomePage() {
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
 
+  // Configuração do crossfade para loop suave
+  useEffect(() => {
+    const video1 = video1Ref.current;
+    const video2 = video2Ref.current;
+
+    if (!video1 || !video2) return;
+
+    const handleVideo1End = () => {
+      setActiveVideo(2);
+      video2.currentTime = 0;
+      video2.play();
+    };
+
+    const handleVideo2End = () => {
+      setActiveVideo(1);
+      video1.currentTime = 0;
+      video1.play();
+    };
+
+    video1.addEventListener("ended", handleVideo1End);
+    video2.addEventListener("ended", handleVideo2End);
+
+    // Inicia o primeiro vídeo
+    video1.play();
+
+    return () => {
+      video1.removeEventListener("ended", handleVideo1End);
+      video2.removeEventListener("ended", handleVideo2End);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen w-screen relative overflow-hidden bg-gradient-to-br from-slate-900 via-red-950 to-black">
-      {/* Video Background */}
-      <video
-        autoPlay
-        loop
-        muted
-        playsInline
-        className="absolute top-0 left-0 w-full h-full object-cover z-0"
-      >
-        <source src="/images/background.mp4" type="video/mp4" />
-      </video>
+      {/* Video Background com Crossfade */}
+      <div className="absolute top-0 left-0 w-full h-full z-0">
+        <video
+          ref={video1Ref}
+          muted
+          playsInline
+          preload="auto"
+          className={`absolute top-0 left-0 w-full h-full object-cover transition-opacity duration-500 ${
+            activeVideo === 1 ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          <source src="/images/background.mp4" type="video/mp4" />
+        </video>
+        <video
+          ref={video2Ref}
+          muted
+          playsInline
+          preload="auto"
+          className={`absolute top-0 left-0 w-full h-full object-cover transition-opacity duration-500 ${
+            activeVideo === 2 ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          <source src="/images/background.mp4" type="video/mp4" />
+        </video>
+      </div>
 
       {/* Dynamic Gradient Overlay */}
       <div
@@ -133,7 +182,7 @@ export default function HomePage() {
             isLoaded ? "translate-y-0 opacity-100" : "translate-y-20 opacity-0"
           }`}
         >
-          <Link href="/lobby" className="=">
+          <Link href="/lobby" className="group relative inline-block">
             {/* Button Glow Effect */}
             <div className="absolute inset-0 bg-gradient-to-r from-red-400/20 via-amber-400/20 to-red-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
@@ -200,6 +249,21 @@ export default function HomePage() {
 
         .float-animation {
           animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+          0%,
+          50% {
+            opacity: 1;
+          }
+          51%,
+          100% {
+            opacity: 0.7;
+          }
+        }
+
+        .blink-animation {
+          animation: blink 2s infinite;
         }
       `}</style>
     </div>
