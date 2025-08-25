@@ -45,7 +45,9 @@ body {
     opacity: 0;
   }
 }
-
+.blink-animation {
+  animation: blink 1.2s infinite;
+}
 @keyframes move-particle {
   0% {
     transform: translate(0, 0);

@@ -6,6 +6,15 @@ import Lottie from "lottie-react";
 import loadingAnimation from "@/assets/loading-code.json";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
+import Image from "next/image";
+import { faEye, faRefresh } from "@fortawesome/free-solid-svg-icons";
+import {
+  faSkull,
+  faAnchor,
+  faCompass,
+  faTreasureChest,
+  faShip,
+} from "@fortawesome/free-solid-svg-icons";
 
 const generateBoard = (words) => {
   const cardCounts = {
@@ -50,19 +59,22 @@ const generateBoard = (words) => {
       } else if (card.category === "blue") {
         return { ...card, imageIndex: blueIndices[blueIndexCounter++] };
       } else {
-        return { ...card, imageIndex: null }; // No index for neutral or black
+        return { ...card, imageIndex: 0 };
       }
     });
 
   const board = [];
   for (let i = 0; i < 5; i++) {
     board.push(
-      shuffledCards.slice(i * 5, i * 5 + 5).map((card, index) => ({
-        word: shuffledWords[i * 5 + index],
-        revealed: false,
-        category: card.category,
-        imageIndex: card.imageIndex,
-      }))
+      shuffledCards.slice(i * 5, i * 5 + 5).map((card, index) => {
+        const cellData = {
+          word: shuffledWords[i * 5 + index],
+          revealed: false,
+          category: card.category,
+          imageIndex: card.imageIndex,
+        };
+        return cellData;
+      })
     );
   }
   return board;
@@ -82,7 +94,13 @@ const Room = () => {
   const [redCardsRemaining, setRedCardsRemaining] = useState(0);
   const [blueCardsRemaining, setBlueCardsRemaining] = useState(0);
   const [clickedCards, setClickedCards] = useState([]);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [isLoaded, setIsLoaded] = useState(false);
 
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoaded(true), 500);
+    return () => clearTimeout(timer);
+  }, []);
   useEffect(() => {
     if (!roomId) return;
 
@@ -94,7 +112,26 @@ const Room = () => {
     socketInstance.emit("join-room", roomId);
 
     socketInstance.on("room-data", (data) => {
-      if (data.board) setBoard(data.board);
+      if (data.board) {
+        // Adiciona imageIndex se não existir
+        const fixedBoard = data.board.map((row) =>
+          row.map((cell) => {
+            if (
+              (cell.category === "red" || cell.category === "blue") &&
+              cell.imageIndex === undefined
+            ) {
+              // Gera índice aleatório para cada carta
+              const maxIndex = cell.category === "red" ? 9 : 8;
+              return {
+                ...cell,
+                imageIndex: Math.floor(Math.random() * maxIndex),
+              };
+            }
+            return cell;
+          })
+        );
+        setBoard(fixedBoard);
+      }
       if (data.playerColor) setPlayerColor(data.playerColor);
       if (data.players) setPlayers(data.players);
       if (data.gameStatus) setGameStatus(data.gameStatus);
@@ -109,7 +146,23 @@ const Room = () => {
     socketInstance.on(
       "reset-board",
       (newBoard, newStatus, newRedCardsRemaining, newBlueCardsRemaining) => {
-        setBoard(newBoard);
+        // Adiciona imageIndex se não existir
+        const fixedBoard = newBoard.map((row) =>
+          row.map((cell) => {
+            if (
+              (cell.category === "red" || cell.category === "blue") &&
+              cell.imageIndex === undefined
+            ) {
+              const maxIndex = cell.category === "red" ? 9 : 8;
+              return {
+                ...cell,
+                imageIndex: Math.floor(Math.random() * maxIndex),
+              };
+            }
+            return cell;
+          })
+        );
+        setBoard(fixedBoard);
         setGameStatus(newStatus);
         setBlackWordRevealed(false);
         setRedCardsRemaining(newRedCardsRemaining);
@@ -268,52 +321,142 @@ const Room = () => {
       >
         <source src="/images/background.mp4" type="video/mp4" />
       </video>
-      {/* Overlay to ensure content visibility */}
-      <div className="absolute top-0 left-0 w-full h-full bg-black opacity-30 z-5"></div>
-      <div className="flex flex-col w-full gap-x-4 relative z-10">
-        <div className="flex flex-col w-full justify-center items-center mt-10">
-          <h1 className="text-4xl font-bold mb-4 text-white">
-            Room: {roomId || "Loading..."}
-          </h1>
-          <div className="flex gap-x-1">
-            <FontAwesomeIcon
+
+      {/* Dynamic Gradient Overlay */}
+      <div
+        className="absolute top-0 left-0 w-full h-full z-5 transition-all duration-1000"
+        style={{
+          background: `radial-gradient(circle at ${mousePosition.x}% ${mousePosition.y}%, 
+                    rgba(220, 38, 38, 0.3) 0%, 
+                    rgba(0, 0, 0, 0.7) 50%, 
+                    rgba(0, 0, 0, 0.9) 100%)`,
+        }}
+      ></div>
+
+      {/* Floating Pirate Elements */}
+      <div className="absolute inset-0 z-5 pointer-events-none">
+        <div className="absolute top-20 left-10 w-32 h-32 opacity-20">
+          <FontAwesomeIcon
+            icon={faSkull}
+            className="text-red-400 text-6xl animate-pulse"
+            style={{ animationDelay: "0s" }}
+          />
+        </div>
+        <div className="absolute top-40 right-16 w-24 h-24 opacity-15">
+          <FontAwesomeIcon
+            icon={faAnchor}
+            className="text-amber-300 text-4xl animate-bounce"
+            style={{ animationDelay: "1s", animationDuration: "3s" }}
+          />
+        </div>
+        <div className="absolute bottom-32 left-20 w-28 h-28 opacity-20">
+          <FontAwesomeIcon
+            icon={faShip}
+            className="text-blue-400 text-5xl animate-pulse"
+            style={{ animationDelay: "2s" }}
+          />
+        </div>
+        <div className="absolute top-60 left-1/2 w-20 h-20 opacity-15">
+          <FontAwesomeIcon
+            icon={faCompass}
+            className="text-yellow-400 text-3xl animate-spin"
+            style={{ animationDuration: "8s" }}
+          />
+        </div>
+        <div className="absolute bottom-40 right-12 w-24 h-24 opacity-20">
+          <FontAwesomeIcon
+            icon={faTreasureChest}
+            className="text-amber-500 text-4xl animate-pulse"
+            style={{ animationDelay: "3s" }}
+          />
+        </div>
+      </div>
+
+      {/* Particle Effects */}
+      <div className="absolute inset-0 z-5 pointer-events-none">
+        {[...Array(20)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute w-1 h-1 bg-amber-400/60 rounded-full animate-pulse"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 3}s`,
+              animationDuration: `${2 + Math.random() * 3}s`,
+            }}
+          ></div>
+        ))}
+      </div>
+
+      <div className="flex flex-col w-full gap-x-4 relative z-10 h-full">
+        {/* Header melhorado */}
+        <div className="flex flex-col w-full justify-center items-center mt-6 md:mt-10 px-4">
+          <div className="flex items-center justify-between w-full max-w-4xl mb-4">
+            <button
               onClick={() => router.push("/lobby")}
-              className="text-white absolute left-5 cursor-pointer"
-              icon={faArrowLeft}
-            />
-            <p className="text-[#f87171] font-bold md:text-2xl">
-              {redCardsRemaining}
-            </p>
-            <span className="text-white md:text-2xl">-</span>
-            <p className="text-[#60a5fa] font-bold md:text-2xl md:mb-5">
-              {blueCardsRemaining}
-            </p>
+              className="flex items-center text-white/90 hover:text-white transition-colors bg-black/30 hover:bg-blue-600/40 backdrop-blur-sm rounded-full p-3 md:p-4 shadow-lg"
+            >
+              <FontAwesomeIcon icon={faArrowLeft} className="text-lg" />
+            </button>
+            <div className="bg-black/40 backdrop-blur-sm rounded-2xl px-6 py-3 shadow-lg border border-white/10">
+              <h1 className="text-2xl md:text-3xl font-bold text-white text-center">
+                Sala:{" "}
+                <span className="text-blue-300">
+                  {roomId || "Carregando..."}
+                </span>
+              </h1>
+            </div>
+            <div className="w-10"></div>{" "}
+            {/* Espaçador para manter o título centralizado */}
           </div>
-          {gameStatus === "playing" ? null : (
-            <h2 className="text-lg text-white mt-5">
-              <span className="text-white font-bold text-2xl blink-animation">
-                Game Over
-              </span>
-            </h2>
+
+          {/* Contador de cartas */}
+          <div className="flex items-center gap-4 bg-black/30 backdrop-blur-sm rounded-xl px-6 py-3 mb-2 border border-white/10 shadow-lg">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded-full bg-red-500"></div>
+              <p className="text-red-300 font-bold text-xl md:text-2xl">
+                {redCardsRemaining}
+              </p>
+            </div>
+
+            <span className="text-white/70 text-xl">|</span>
+
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded-full bg-blue-500"></div>
+              <p className="text-blue-300 font-bold text-xl md:text-2xl">
+                {blueCardsRemaining}
+              </p>
+            </div>
+          </div>
+
+          {/* Status do jogo */}
+          {gameStatus !== "playing" && (
+            <div className="mt-4 bg-red-500/90 backdrop-blur-sm rounded-xl px-6 py-2 border border-red-300/30 shadow-lg">
+              <h2 className="text-white font-bold text-xl md:text-2xl animate-pulse">
+                Fim de Jogo
+              </h2>
+            </div>
           )}
         </div>
-        <div className="w-full h-full flex justify-center items-center mr-60 md:m-0 mt-10 md:mt-0">
+
+        {/* Área do tabuleiro */}
+        <div className="w-full h-full flex justify-center items-center mt-6 md:mt-8 px-4">
           {board.length > 0 ? (
-            <div className="grid grid-cols-5 gap-2 md:gap-5">
+            <div className="grid grid-cols-5 gap-2 md:gap-4 max-w-4xl">
               {board.map((row, rowIndex) =>
                 row.map((cell, colIndex) => (
                   <div
                     key={`${rowIndex}-${colIndex}`}
                     onClick={() => handleCellClick(rowIndex, colIndex)}
-                    className={`w-16 md:w-32 h-16 md:h-32 perspective md:hover:scale-110 transition-all ease-in ${
+                    className={`w-16 md:w-32 h-16 md:h-32 perspective transition-all duration-300 ease-out ${
                       clickedCards.some(
                         (card) =>
                           card.row === rowIndex &&
                           card.col === colIndex &&
                           revealedBySpymaster
                       )
-                        ? "border-4 border-yellow-400"
-                        : ""
+                        ? "ring-2 ring-yellow-400 ring-offset-2 ring-offset-black/50 rounded-lg"
+                        : "hover:scale-105"
                     }`}
                   >
                     <div
@@ -323,59 +466,38 @@ const Room = () => {
                           : ""
                       }`}
                     >
+                      {/* Frente da carta */}
                       <div
-                        className={`absolute w-full h-full backface-hidden flex items-center justify-center border border-gray-300 cursor-pointer rounded ${
-                          cell.revealed || revealedBySpymaster ? "" : "bg-white"
-                        }`}
-                        style={
+                        className={`absolute w-full h-full backface-hidden flex items-center justify-center border-2 border-gray-400/30 cursor-pointer rounded-lg bg-white/95 shadow-md ${
                           cell.revealed || revealedBySpymaster
-                            ? getCellColor(cell.category, cell.imageIndex)
-                            : {}
-                        }
+                            ? "shadow-inner"
+                            : ""
+                        }`}
                       >
-                        <span
-                          className={`text-lg ${
-                            cell.revealed || revealedBySpymaster
-                              ? cell.category === "black"
-                                ? "text-white font-bold absolute bottom-0 text-xs md:text-base"
-                                : "text-white font-bold text-xs md:text-base"
-                              : "text-gray-800 font-bold text-xs md:text-base"
-                          }`}
-                        >
+                        <span className="text-gray-800 font-bold text-xs md:text-sm text-center px-1 leading-tight">
                           {cell.word.charAt(0).toUpperCase() +
                             cell.word.slice(1)}
                         </span>
                       </div>
+
+                      {/* Verso da carta (revelada) */}
                       <div
-                        className={`absolute w-full h-full backface-hidden rotate-y-180 flex items-center justify-center border border-gray-300 cursor-pointer rounded ${
-                          cell.revealed || revealedBySpymaster
-                            ? ""
-                            : "bg-white font-bold"
+                        className={`absolute w-full h-full backface-hidden rotate-y-180 flex items-center justify-center cursor-pointer rounded-lg overflow-hidden ${
+                          cell.revealed || revealedBySpymaster ? "" : "bg-white"
                         }`}
-                        style={
-                          cell.revealed || revealedBySpymaster
-                            ? getCellColor(cell.category, cell.imageIndex)
-                            : {}
-                        }
+                        style={getCellColor(cell.category, cell.imageIndex)}
                       >
-                        <div
-                          className={`absolute bottom-0 w-full h-5 md:h-10 ${
-                            (cell.revealed || revealedBySpymaster) &&
-                            "bg-gradient-to-t from-black"
-                          }`}
-                        ></div>
-                        <span
-                          className={`text-lg ${
-                            cell.revealed || revealedBySpymaster
-                              ? cell.category === "black"
-                                ? "text-white font-bold absolute bottom-0 text-xs md:text-base"
-                                : "text-white absolute bottom-0 rounded-lg px-2 opacity-80 font-bold text-xs md:text-base"
-                              : "text-gray-800 font-bold text-xs md:text-base"
-                          }`}
-                        >
-                          {cell.word.charAt(0).toUpperCase() +
-                            cell.word.slice(1)}
-                        </span>
+                        <div className="absolute inset-0 bg-black/20"></div>
+                        <div className="absolute bottom-0 w-full py-1 bg-gradient-to-t from-black/90 to-transparent flex justify-center items-end">
+                          <span
+                            className={`text-white font-bold text-xs md:text-sm mb-1 ${
+                              cell.category === "black" ? "text-white" : ""
+                            }`}
+                          >
+                            {cell.word.charAt(0).toUpperCase() +
+                              cell.word.slice(1)}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -383,27 +505,31 @@ const Room = () => {
               )}
             </div>
           ) : (
-            <div className="flex justify-center items-start min-h-screen">
+            <div className="flex justify-center items-center min-h-[50vh]">
               <Lottie
                 animationData={loadingAnimation}
-                className="w-15 h-15"
+                className="w-20 h-20"
                 loop
               />
             </div>
           )}
         </div>
-        <div className="flex justify-end items-center gap-x-2 mt-5 mr-5 md:m-0 w-full">
+
+        {/* Botões de ação */}
+        <div className="flex justify-center items-center gap-4 mt-6 md:mt-8 pb-6 md:pb-8">
           <button
             onClick={handleRevealAllClick}
-            className="bg-[#60a5fa] md:hover:bg-[#147af8] transition ease-in px-4 text-white rounded h-8"
+            className="bg-gradient-to-r bg-white/10 backdrop-blur-lg border border-white/20   transition-all duration-300 px-6 py-3 text-white font-semibold rounded-xl shadow-lg flex items-center gap-2"
           >
-            Spymaster
+            <FontAwesomeIcon icon={faEye} />
+            <span>Capitão</span>
           </button>
           <button
             onClick={handleResetGame}
-            className="bg-[#f87171] md:hover:bg-[#f42727] transition ease-in px-4 text-white rounded h-8 mr-3"
+            className="bg-gradient-to-r bg-white/10 backdrop-blur-lg border border-white/20  transition-all duration-300 px-6 py-3 text-white font-semibold rounded-xl shadow-lg  flex items-center gap-2"
           >
-            Reset
+            <FontAwesomeIcon icon={faRefresh} />
+            <span>Reiniciar</span>
           </button>
         </div>
       </div>
@@ -423,29 +549,35 @@ const getCellColor = (category, imageIndex) => {
 
   switch (category) {
     case "red":
+      // Verifica se imageIndex é válido, senão usa 0 como fallback
+      const redIndex =
+        imageIndex !== undefined && imageIndex !== null ? imageIndex : 0;
       return {
-        backgroundImage: `url('${redCards[imageIndex]}')`,
+        backgroundImage: `url(${redCards[redIndex]})`,
         backgroundSize: "cover",
         backgroundRepeat: "no-repeat",
         backgroundPosition: "center",
       };
     case "blue":
+      // Verifica se imageIndex é válido, senão usa 0 como fallback
+      const blueIndex =
+        imageIndex !== undefined && imageIndex !== null ? imageIndex : 0;
       return {
-        backgroundImage: `url('${blueCards[imageIndex]}')`,
+        backgroundImage: `url(${blueCards[blueIndex]})`,
         backgroundSize: "cover",
         backgroundRepeat: "no-repeat",
         backgroundPosition: "center",
       };
     case "black":
       return {
-        backgroundImage: "url('/images/deathCard.png')",
+        backgroundImage: `url(/images/deathCard.png)`,
         backgroundSize: "cover",
         backgroundRepeat: "no-repeat",
         backgroundPosition: "center",
       };
     default:
       return {
-        backgroundImage: "url('/images/grayCard.png')",
+        backgroundImage: `url(/images/grayCard.png)`,
         backgroundSize: "cover",
         backgroundRepeat: "no-repeat",
         backgroundPosition: "center",
