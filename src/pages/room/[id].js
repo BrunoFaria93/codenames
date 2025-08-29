@@ -119,8 +119,8 @@ const Room = () => {
 
     socketInstance.on("room-data", (data) => {
       if (data.board) {
-        console.log("Board sample from server:", data.board[0][0]); // Debug
-        setBoard(data.board);
+        const boardWithImages = addImageIndexToBoard(data.board);
+        setBoard(boardWithImages);
       }
       // SEMPRE aceitar o estado do servidor
       if (data.board !== undefined) setBoard(data.board);
@@ -140,9 +140,10 @@ const Room = () => {
     });
 
     socketInstance.on("reset-board", (newBoard, newStatus) => {
-      setBoard(newBoard);
+      const boardWithImages = addImageIndexToBoard(newBoard);
+      setBoard(boardWithImages);
       setGameStatus(newStatus || "playing");
-      setCurrentTurn("blue");
+      setCurrentTurn("red");
       setBlackWordRevealed(false);
       setWinnerTeam(null);
       setClickedCards([]);
@@ -224,6 +225,34 @@ const Room = () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [router]);
+
+  const addImageIndexToBoard = (board) => {
+    const redIndices = Array.from({ length: 9 }, (_, i) => i).sort(
+      () => Math.random() - 0.5
+    );
+    const blueIndices = Array.from({ length: 8 }, (_, i) => i).sort(
+      () => Math.random() - 0.5
+    );
+
+    let redCounter = 0;
+    let blueCounter = 0;
+
+    return board.map((row) =>
+      row.map((cell) => {
+        let imageIndex = 0;
+        if (cell.category === "red") {
+          imageIndex = redIndices[redCounter++];
+        } else if (cell.category === "blue") {
+          imageIndex = blueIndices[blueCounter++];
+        }
+
+        return {
+          ...cell,
+          imageIndex: imageIndex,
+        };
+      })
+    );
+  };
 
   const handleRevealAllClick = () => {
     setRevealedBySpymaster(!revealedBySpymaster);
