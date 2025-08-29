@@ -118,11 +118,9 @@ const Room = () => {
     socketInstance.emit("join-room", roomId);
 
     socketInstance.on("room-data", (data) => {
-      if (data.board) {
-        const boardWithImages = addImageIndexToBoard(data.board);
-        setBoard(boardWithImages);
-      }
-      // SEMPRE aceitar o estado do servidor
+      console.log("Room data received:", data);
+
+      // SEMPRE aceitar o estado do servidor sem modificações
       if (data.board !== undefined) setBoard(data.board);
       if (data.playerColor !== undefined) setPlayerColor(data.playerColor);
       if (data.players !== undefined) setPlayers(data.players);
@@ -130,6 +128,7 @@ const Room = () => {
       if (data.currentTeam !== undefined) setCurrentTurn(data.currentTeam);
       if (data.blackWordRevealed !== undefined)
         setBlackWordRevealed(data.blackWordRevealed);
+      if (data.winnerTeam !== undefined) setWinnerTeam(data.winnerTeam);
       if (data.spymasters !== undefined) {
         // Handle spymasters if needed
       }
@@ -140,8 +139,10 @@ const Room = () => {
     });
 
     socketInstance.on("reset-board", (newBoard, newStatus) => {
-      const boardWithImages = addImageIndexToBoard(newBoard);
-      setBoard(boardWithImages);
+      console.log("Reset board received:", newBoard);
+
+      // Usar o board exatamente como vem do servidor
+      setBoard(newBoard);
       setGameStatus(newStatus || "playing");
       setCurrentTurn("red");
       setBlackWordRevealed(false);
@@ -658,42 +659,29 @@ const Room = () => {
 };
 
 const getCellColor = (category, imageIndex) => {
-  console.log(`Category: ${category}, ImageIndex: ${imageIndex}`); // Debug line
+  console.log(`Category: ${category}, ImageIndex: ${imageIndex}`);
 
-  const redCards = Array.from(
-    { length: 9 },
-    (_, i) => `/images/redCard${i + 1}.png`
-  );
-  const blueCards = Array.from(
-    { length: 8 },
-    (_, i) => `/images/blueCard${i + 1}.png`
-  );
+  // Garantir que o imageIndex seja válido
+  const safeImageIndex =
+    imageIndex !== undefined && imageIndex !== null && imageIndex >= 0
+      ? imageIndex
+      : 0;
 
   switch (category) {
     case "red":
-      const redIndex =
-        imageIndex !== undefined && imageIndex !== null && imageIndex >= 0
-          ? imageIndex
-          : 0;
-      console.log(
-        `Red card using index: ${redIndex}, image: ${redCards[redIndex]}`
-      ); // Debug
+      const redImageIndex = Math.min(safeImageIndex, 8); // Máximo 8 (redCard1 até redCard9)
+      console.log(`Red card using index: ${redImageIndex + 1}`);
       return {
-        backgroundImage: `url(${redCards[redIndex]})`,
+        backgroundImage: `url(/images/redCard${redImageIndex + 1}.png)`,
         backgroundSize: "cover",
         backgroundRepeat: "no-repeat",
         backgroundPosition: "center",
       };
     case "blue":
-      const blueIndex =
-        imageIndex !== undefined && imageIndex !== null && imageIndex >= 0
-          ? imageIndex
-          : 0;
-      console.log(
-        `Blue card using index: ${blueIndex}, image: ${blueCards[blueIndex]}`
-      ); // Debug
+      const blueImageIndex = Math.min(safeImageIndex, 7); // Máximo 7 (blueCard1 até blueCard8)
+      console.log(`Blue card using index: ${blueImageIndex + 1}`);
       return {
-        backgroundImage: `url(${blueCards[blueIndex]})`,
+        backgroundImage: `url(/images/blueCard${blueImageIndex + 1}.png)`,
         backgroundSize: "cover",
         backgroundRepeat: "no-repeat",
         backgroundPosition: "center",
