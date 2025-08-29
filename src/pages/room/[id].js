@@ -135,6 +135,7 @@ const Room = () => {
     });
 
     socketInstance.on("turn-changed", ({ newTurn }) => {
+      console.log("Turn changed to:", newTurn);
       setCurrentTurn(newTurn);
     });
 
