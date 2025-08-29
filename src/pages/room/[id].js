@@ -124,7 +124,7 @@ const Room = () => {
       if (data.playerColor) setPlayerColor(data.playerColor);
       if (data.players) setPlayers(data.players);
       if (data.gameStatus) setGameStatus(data.gameStatus);
-      if (data.currentTeam !== undefined) setCurrentTurn(data.currentTeam); // Mudança aqui
+      if (data.currentTeam !== undefined) setCurrentTurn(data.currentTeam);
       if (data.blackWordRevealed !== undefined)
         setBlackWordRevealed(data.blackWordRevealed);
       if (data.redCardsRemaining !== undefined)
