@@ -106,7 +106,7 @@ const Room = () => {
     const timer = setTimeout(() => setIsLoaded(true), 500);
     return () => clearTimeout(timer);
   }, []);
-  console.log("");
+
   useEffect(() => {
     if (!roomId) return;
 
@@ -118,41 +118,53 @@ const Room = () => {
     socketInstance.emit("join-room", roomId);
 
     socketInstance.on("room-data", (data) => {
-      console.log("Room data received:", data);
-
-      // SEMPRE aceitar o estado do servidor sem modificações
-      if (data.board !== undefined) setBoard(data.board);
-      if (data.playerColor !== undefined) setPlayerColor(data.playerColor);
-      if (data.players !== undefined) setPlayers(data.players);
-      if (data.gameStatus !== undefined) setGameStatus(data.gameStatus);
-      if (data.currentTeam !== undefined) setCurrentTurn(data.currentTeam);
+      if (data.board) {
+        setBoard(data.board); // Apenas esta linha - SEM correção automática
+      }
+      if (data.playerColor) setPlayerColor(data.playerColor);
+      if (data.players) setPlayers(data.players);
+      if (data.gameStatus) setGameStatus(data.gameStatus);
+      if (data.currentTurn) setCurrentTurn(data.currentTurn);
       if (data.blackWordRevealed !== undefined)
         setBlackWordRevealed(data.blackWordRevealed);
-      if (data.winnerTeam !== undefined) setWinnerTeam(data.winnerTeam);
-      if (data.spymasters !== undefined) {
-        // Handle spymasters if needed
+      if (data.redCardsRemaining !== undefined)
+        setRedCardsRemaining(data.redCardsRemaining);
+      if (data.blueCardsRemaining !== undefined)
+        setBlueCardsRemaining(data.blueCardsRemaining);
+
+      if (data.gameStatus === "finished" && !data.blackWordRevealed) {
+        if (data.redCardsRemaining === 0) {
+          setWinnerTeam("red");
+        } else if (data.blueCardsRemaining === 0) {
+          setWinnerTeam("blue");
+        } else {
+          setWinnerTeam(data.winnerTeam || null);
+        }
+      } else {
+        setWinnerTeam(data.winnerTeam || null);
       }
     });
 
     socketInstance.on("turn-changed", ({ newTurn }) => {
-      console.log("Turn changed to:", newTurn);
       setCurrentTurn(newTurn);
     });
 
-    socketInstance.on("reset-board", (newBoard, newStatus) => {
-      console.log("Reset board received:", newBoard);
-
-      // Usar o board exatamente como vem do servidor
-      setBoard(newBoard);
-      setGameStatus(newStatus || "playing");
-      setCurrentTurn("red");
-      setBlackWordRevealed(false);
-      setWinnerTeam(null);
-      setClickedCards([]);
-      setRevealedBySpymaster(false);
-    });
+    socketInstance.on(
+      "reset-board",
+      (newBoard, newStatus, newRedCardsRemaining, newBlueCardsRemaining) => {
+        // REMOVI toda a correção automática de imageIndex aqui
+        setBoard(newBoard); // Apenas esta linha - SEM correção
+        setGameStatus(newStatus);
+        setWinnerTeam(null);
+        setCurrentTurn("red");
+        setBlackWordRevealed(false);
+        setRedCardsRemaining(newRedCardsRemaining);
+        setBlueCardsRemaining(newBlueCardsRemaining);
+      }
+    );
 
     return () => {
+      socketInstance.off("turn-changed");
       socketInstance.disconnect();
     };
   }, [roomId]);
@@ -227,34 +239,6 @@ const Room = () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [router]);
-
-  const addImageIndexToBoard = (board) => {
-    const redIndices = Array.from({ length: 9 }, (_, i) => i).sort(
-      () => Math.random() - 0.5
-    );
-    const blueIndices = Array.from({ length: 8 }, (_, i) => i).sort(
-      () => Math.random() - 0.5
-    );
-
-    let redCounter = 0;
-    let blueCounter = 0;
-
-    return board.map((row) =>
-      row.map((cell) => {
-        let imageIndex = 0;
-        if (cell.category === "red") {
-          imageIndex = redIndices[redCounter++];
-        } else if (cell.category === "blue") {
-          imageIndex = blueIndices[blueCounter++];
-        }
-
-        return {
-          ...cell,
-          imageIndex: imageIndex,
-        };
-      })
-    );
-  };
 
   const handleRevealAllClick = () => {
     setRevealedBySpymaster(!revealedBySpymaster);
@@ -344,18 +328,19 @@ const Room = () => {
   }, [socket]);
 
   const handleResetGame = () => {
-    if (socket) {
-      socket.emit("reset-game", roomId);
+    setClickedCards([]);
+    const newBoard = generateBoard(words);
+    setBoard(newBoard);
+    setRevealedBySpymaster(false);
+    setGameStatus("playing");
+    setBlackWordRevealed(false);
+    setWinnerTeam(null);
+    setCurrentTurn("red");
+    setRedCardsRemaining(9);
+    setBlueCardsRemaining(8);
 
-      // Força o reset local também
-      setClickedCards([]);
-      setRevealedBySpymaster(false);
-      setGameStatus("playing");
-      setBlackWordRevealed(false);
-      setWinnerTeam(null);
-      setCurrentTurn("blue"); // Força azul como inicial
-      setRedCardsRemaining(9);
-      setBlueCardsRemaining(8);
+    if (socket) {
+      socket.emit("reset-game", roomId); // Mudança aqui: usar "reset-game" em vez de "reset-board"
     }
   };
 
@@ -660,29 +645,30 @@ const Room = () => {
 };
 
 const getCellColor = (category, imageIndex) => {
-  console.log(`Category: ${category}, ImageIndex: ${imageIndex}`);
-
-  // Garantir que o imageIndex seja válido
-  const safeImageIndex =
-    imageIndex !== undefined && imageIndex !== null && imageIndex >= 0
-      ? imageIndex
-      : 0;
+  const redCards = Array.from(
+    { length: 9 },
+    (_, i) => `/images/redCard${i + 1}.png`
+  );
+  const blueCards = Array.from(
+    { length: 8 },
+    (_, i) => `/images/blueCard${i + 1}.png`
+  );
 
   switch (category) {
     case "red":
-      const redImageIndex = Math.min(safeImageIndex, 8); // Máximo 8 (redCard1 até redCard9)
-      console.log(`Red card using index: ${redImageIndex + 1}`);
+      const redIndex =
+        imageIndex !== undefined && imageIndex !== null ? imageIndex : 0;
       return {
-        backgroundImage: `url(/images/redCard${redImageIndex + 1}.png)`,
+        backgroundImage: `url(${redCards[redIndex]})`,
         backgroundSize: "cover",
         backgroundRepeat: "no-repeat",
         backgroundPosition: "center",
       };
     case "blue":
-      const blueImageIndex = Math.min(safeImageIndex, 7); // Máximo 7 (blueCard1 até blueCard8)
-      console.log(`Blue card using index: ${blueImageIndex + 1}`);
+      const blueIndex =
+        imageIndex !== undefined && imageIndex !== null ? imageIndex : 0;
       return {
-        backgroundImage: `url(/images/blueCard${blueImageIndex + 1}.png)`,
+        backgroundImage: `url(${blueCards[blueIndex]})`,
         backgroundSize: "cover",
         backgroundRepeat: "no-repeat",
         backgroundPosition: "center",
