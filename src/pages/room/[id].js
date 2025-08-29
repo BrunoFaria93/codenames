@@ -118,30 +118,16 @@ const Room = () => {
     socketInstance.emit("join-room", roomId);
 
     socketInstance.on("room-data", (data) => {
-      if (data.board) {
-        setBoard(data.board);
-      }
-      if (data.playerColor) setPlayerColor(data.playerColor);
-      if (data.players) setPlayers(data.players);
-      if (data.gameStatus) setGameStatus(data.gameStatus);
+      // SEMPRE aceitar o estado do servidor
+      if (data.board !== undefined) setBoard(data.board);
+      if (data.playerColor !== undefined) setPlayerColor(data.playerColor);
+      if (data.players !== undefined) setPlayers(data.players);
+      if (data.gameStatus !== undefined) setGameStatus(data.gameStatus);
       if (data.currentTeam !== undefined) setCurrentTurn(data.currentTeam);
       if (data.blackWordRevealed !== undefined)
         setBlackWordRevealed(data.blackWordRevealed);
-      if (data.redCardsRemaining !== undefined)
-        setRedCardsRemaining(data.redCardsRemaining);
-      if (data.blueCardsRemaining !== undefined)
-        setBlueCardsRemaining(data.blueCardsRemaining);
-
-      if (data.gameStatus === "finished" && !data.blackWordRevealed) {
-        if (data.redCardsRemaining === 0) {
-          setWinnerTeam("red");
-        } else if (data.blueCardsRemaining === 0) {
-          setWinnerTeam("blue");
-        } else {
-          setWinnerTeam(data.winnerTeam || null);
-        }
-      } else {
-        setWinnerTeam(data.winnerTeam || null);
+      if (data.spymasters !== undefined) {
+        // Handle spymasters if needed
       }
     });
 
@@ -149,22 +135,17 @@ const Room = () => {
       setCurrentTurn(newTurn);
     });
 
-    socketInstance.on(
-      "reset-board",
-      (newBoard, newStatus, newRedCardsRemaining, newBlueCardsRemaining) => {
-        // REMOVI toda a correção automática de imageIndex aqui
-        setBoard(newBoard); // Apenas esta linha - SEM correção
-        setGameStatus(newStatus);
-        setWinnerTeam(null);
-        setCurrentTurn("red");
-        setBlackWordRevealed(false);
-        setRedCardsRemaining(newRedCardsRemaining);
-        setBlueCardsRemaining(newBlueCardsRemaining);
-      }
-    );
+    socketInstance.on("reset-board", (newBoard, newStatus) => {
+      setBoard(newBoard);
+      setGameStatus(newStatus || "playing");
+      setCurrentTurn("blue");
+      setBlackWordRevealed(false);
+      setWinnerTeam(null);
+      setClickedCards([]);
+      setRevealedBySpymaster(false);
+    });
 
     return () => {
-      socketInstance.off("turn-changed");
       socketInstance.disconnect();
     };
   }, [roomId]);
@@ -328,19 +309,18 @@ const Room = () => {
   }, [socket]);
 
   const handleResetGame = () => {
-    setClickedCards([]);
-    const newBoard = generateBoard(words);
-    setBoard(newBoard);
-    setRevealedBySpymaster(false);
-    setGameStatus("playing");
-    setBlackWordRevealed(false);
-    setWinnerTeam(null);
-    setCurrentTurn("red");
-    setRedCardsRemaining(9);
-    setBlueCardsRemaining(8);
-
     if (socket) {
-      socket.emit("reset-game", roomId); // Mudança aqui: usar "reset-game" em vez de "reset-board"
+      socket.emit("reset-game", roomId);
+
+      // Força o reset local também
+      setClickedCards([]);
+      setRevealedBySpymaster(false);
+      setGameStatus("playing");
+      setBlackWordRevealed(false);
+      setWinnerTeam(null);
+      setCurrentTurn("blue"); // Força azul como inicial
+      setRedCardsRemaining(9);
+      setBlueCardsRemaining(8);
     }
   };
 
