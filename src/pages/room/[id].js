@@ -27,6 +27,7 @@ const generateBoard = (words) => {
     black: 1,
   };
 
+  // Garantir palavras únicas
   const uniqueWords = Array.from(new Set(words));
   if (uniqueWords.length < 25) {
     throw new Error(
@@ -37,6 +38,7 @@ const generateBoard = (words) => {
   const shuffledWords = uniqueWords
     .sort(() => Math.random() - 0.5)
     .slice(0, 25);
+
   const cards = [
     ...Array(cardCounts.red).fill({ category: "red" }),
     ...Array(cardCounts.blue).fill({ category: "blue" }),
@@ -44,13 +46,14 @@ const generateBoard = (words) => {
     { category: "black" },
   ];
 
-  // Assign a fixed image index to each card
+  // Gerar índices únicos para as imagens
   const redIndices = Array.from({ length: 9 }, (_, i) => i).sort(
     () => Math.random() - 0.5
   );
   const blueIndices = Array.from({ length: 8 }, (_, i) => i).sort(
     () => Math.random() - 0.5
   );
+
   let redIndexCounter = 0;
   let blueIndexCounter = 0;
 
@@ -69,15 +72,12 @@ const generateBoard = (words) => {
   const board = [];
   for (let i = 0; i < 5; i++) {
     board.push(
-      shuffledCards.slice(i * 5, i * 5 + 5).map((card, index) => {
-        const cellData = {
-          word: shuffledWords[i * 5 + index],
-          revealed: false,
-          category: card.category,
-          imageIndex: card.imageIndex,
-        };
-        return cellData;
-      })
+      shuffledCards.slice(i * 5, i * 5 + 5).map((card, index) => ({
+        word: shuffledWords[i * 5 + index],
+        revealed: false,
+        category: card.category,
+        imageIndex: card.imageIndex,
+      }))
     );
   }
   return board;
@@ -119,23 +119,7 @@ const Room = () => {
 
     socketInstance.on("room-data", (data) => {
       if (data.board) {
-        // Adiciona imageIndex se não existir
-        const fixedBoard = data.board.map((row) =>
-          row.map((cell) => {
-            if (
-              (cell.category === "red" || cell.category === "blue") &&
-              cell.imageIndex === undefined
-            ) {
-              const maxIndex = cell.category === "red" ? 9 : 8;
-              return {
-                ...cell,
-                imageIndex: Math.floor(Math.random() * maxIndex),
-              };
-            }
-            return cell;
-          })
-        );
-        setBoard(fixedBoard);
+        setBoard(data.board); // Apenas esta linha - SEM correção automática
       }
       if (data.playerColor) setPlayerColor(data.playerColor);
       if (data.players) setPlayers(data.players);
@@ -148,7 +132,6 @@ const Room = () => {
       if (data.blueCardsRemaining !== undefined)
         setBlueCardsRemaining(data.blueCardsRemaining);
 
-      // Derive winnerTeam based on card counts to ensure consistency
       if (data.gameStatus === "finished" && !data.blackWordRevealed) {
         if (data.redCardsRemaining === 0) {
           setWinnerTeam("red");
@@ -169,23 +152,8 @@ const Room = () => {
     socketInstance.on(
       "reset-board",
       (newBoard, newStatus, newRedCardsRemaining, newBlueCardsRemaining) => {
-        // Adiciona imageIndex se não existir
-        const fixedBoard = newBoard.map((row) =>
-          row.map((cell) => {
-            if (
-              (cell.category === "red" || cell.category === "blue") &&
-              cell.imageIndex === undefined
-            ) {
-              const maxIndex = cell.category === "red" ? 9 : 8;
-              return {
-                ...cell,
-                imageIndex: Math.floor(Math.random() * maxIndex),
-              };
-            }
-            return cell;
-          })
-        );
-        setBoard(fixedBoard);
+        // REMOVI toda a correção automática de imageIndex aqui
+        setBoard(newBoard); // Apenas esta linha - SEM correção
         setGameStatus(newStatus);
         setWinnerTeam(null);
         setCurrentTurn("red");
@@ -302,11 +270,11 @@ const Room = () => {
       updatedGameStatus = "finished";
       updatedBlackWordRevealed = true;
       updatedWinnerTeam = currentTurn === "red" ? "blue" : "red";
-    } else {
-      if (clickedCell.category !== currentTurn) {
-        newCurrentTurn = currentTurn === "red" ? "blue" : "red";
-      }
+    } else if (clickedCell.category !== currentTurn) {
+      // Se clicou em carta que NÃO é da equipe atual, passa a vez
+      newCurrentTurn = currentTurn === "red" ? "blue" : "red";
     }
+    // Se clicou em carta da própria equipe, continua o turno
 
     setBoard(newBoard);
     setGameStatus(updatedGameStatus);
@@ -372,7 +340,7 @@ const Room = () => {
     setBlueCardsRemaining(8);
 
     if (socket) {
-      socket.emit("reset-board", roomId, newBoard, "playing", 9, 8);
+      socket.emit("reset-game", roomId); // Mudança aqui: usar "reset-game" em vez de "reset-board"
     }
   };
 
