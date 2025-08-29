@@ -106,7 +106,7 @@ const Room = () => {
     const timer = setTimeout(() => setIsLoaded(true), 500);
     return () => clearTimeout(timer);
   }, []);
-
+  console.log("");
   useEffect(() => {
     if (!roomId) return;
 
