@@ -49,15 +49,23 @@ const Lobby = () => {
     setSocket(socketInstance);
 
     socketInstance.on("rooms-update", (data) => {
+      console.log("Rooms update received:", data);
       setRooms(data);
       setLoading(false);
+    });
+
+    socketInstance.on("room-data", (data) => {
+      if (data.roomId && data.message === "You joined the room!") {
+        setIsCreatingRoom(false);
+        router.push(`/room/${data.roomId}`);
+      }
     });
 
     return () => {
       setLoading(false);
       socketInstance.disconnect();
     };
-  }, []);
+  }, [router]);
 
   const handleCreateRoom = async () => {
     if (!newRoomName.trim()) {
@@ -71,11 +79,7 @@ const Lobby = () => {
     try {
       socket.emit("create-room", newRoomName.trim());
       setNewRoomName("");
-
-      // Simulate a small delay for better UX
-      setTimeout(() => {
-        setIsCreatingRoom(false);
-      }, 500);
+      // Removido o setTimeout - o redirect será feito pelo listener
     } catch (err) {
       setError("Erro ao criar sala. Tente novamente.");
       setIsCreatingRoom(false);

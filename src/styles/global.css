@@ -1,4 +1,3 @@
-/* src/styles/globals.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -22,7 +21,7 @@
 
 body {
   color: rgb(var(--foreground-rgb));
-  font-family: "Free Pixel", monospace, sans-serif; /* Adicionei fallbacks */
+  font-family: "Free Pixel", monospace, sans-serif;
   background: linear-gradient(
       to bottom,
       transparent,
@@ -31,16 +30,8 @@ body {
     rgb(var(--background-start-rgb));
 }
 
-/* Classe customizada para a fonte Free Pixel */
 .font-free-pixel {
   font-family: "Free Pixel", monospace, sans-serif;
-}
-
-/* Alternativa: usar font-display para melhor performance */
-@font-face {
-  font-family: "Free Pixel";
-  font-display: swap;
-  src: url("https://fonts.googleapis.com/css2?family=Free+Pixel&display=swap");
 }
 
 @layer utilities {
@@ -61,25 +52,4 @@ body {
 
 .blink-animation {
   animation: blink 1.2s infinite;
-}
-
-@keyframes move-particle {
-  0% {
-    transform: translate(0, 0);
-  }
-  50% {
-    transform: translate(var(--direction-x), var(--direction-y));
-  }
-  100% {
-    transform: translate(0, 0);
-  }
-}
-
-.bg-gradient-to-b {
-  background: linear-gradient(to bottom, #0a0a23, #1a1a3a);
-}
-
-div[style*="animation: move-particle"] {
-  --direction-x: calc(var(--direction) * 20px);
-  --direction-y: calc(var(--direction) * 20px);
 }
