@@ -119,12 +119,12 @@ const Room = () => {
 
     socketInstance.on("room-data", (data) => {
       if (data.board) {
-        setBoard(data.board); // Apenas esta linha - SEM correção automática
+        setBoard(data.board);
       }
       if (data.playerColor) setPlayerColor(data.playerColor);
       if (data.players) setPlayers(data.players);
       if (data.gameStatus) setGameStatus(data.gameStatus);
-      if (data.currentTurn) setCurrentTurn(data.currentTurn);
+      if (data.currentTeam !== undefined) setCurrentTurn(data.currentTeam); // Mudança aqui
       if (data.blackWordRevealed !== undefined)
         setBlackWordRevealed(data.blackWordRevealed);
       if (data.redCardsRemaining !== undefined)
@@ -645,6 +645,8 @@ const Room = () => {
 };
 
 const getCellColor = (category, imageIndex) => {
+  console.log(`Category: ${category}, ImageIndex: ${imageIndex}`); // Debug line
+
   const redCards = Array.from(
     { length: 9 },
     (_, i) => `/images/redCard${i + 1}.png`
@@ -657,7 +659,12 @@ const getCellColor = (category, imageIndex) => {
   switch (category) {
     case "red":
       const redIndex =
-        imageIndex !== undefined && imageIndex !== null ? imageIndex : 0;
+        imageIndex !== undefined && imageIndex !== null && imageIndex >= 0
+          ? imageIndex
+          : 0;
+      console.log(
+        `Red card using index: ${redIndex}, image: ${redCards[redIndex]}`
+      ); // Debug
       return {
         backgroundImage: `url(${redCards[redIndex]})`,
         backgroundSize: "cover",
@@ -666,7 +673,12 @@ const getCellColor = (category, imageIndex) => {
       };
     case "blue":
       const blueIndex =
-        imageIndex !== undefined && imageIndex !== null ? imageIndex : 0;
+        imageIndex !== undefined && imageIndex !== null && imageIndex >= 0
+          ? imageIndex
+          : 0;
+      console.log(
+        `Blue card using index: ${blueIndex}, image: ${blueCards[blueIndex]}`
+      ); // Debug
       return {
         backgroundImage: `url(${blueCards[blueIndex]})`,
         backgroundSize: "cover",
