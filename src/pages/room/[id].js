@@ -118,6 +118,10 @@ const Room = () => {
     socketInstance.emit("join-room", roomId);
 
     socketInstance.on("room-data", (data) => {
+      if (data.board) {
+        console.log("Board sample from server:", data.board[0][0]); // Debug
+        setBoard(data.board);
+      }
       // SEMPRE aceitar o estado do servidor
       if (data.board !== undefined) setBoard(data.board);
       if (data.playerColor !== undefined) setPlayerColor(data.playerColor);
